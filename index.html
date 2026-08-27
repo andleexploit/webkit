@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PS4 Exploit Host</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Partículas animadas de fondo */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(0, 150, 255, 0.5);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Contenedor principal */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header con efecto glassmorphism */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00d4ff, #0099ff, #0066ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(0, 150, 255, 0.5);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .firmware {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 102, 255, 0.2));
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 25px;
+            font-size: 0.9rem;
+            color: #00d4ff;
+        }
+
+        /* Grid de exploits */
+        .exploits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        /* Tarjeta de exploit */
+        .exploit-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .exploit-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .exploit-card:hover::before {
+            left: 100%;
+        }
+
+        .exploit-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(0, 212, 255, 0.5);
+            box-shadow: 0 20px 60px rgba(0, 150, 255, 0.3), 
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .exploit-card:active {
+            transform: translateY(-5px) scale(0.98);
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #00d4ff, #0066ff);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 150, 255, 0.3);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-stable { background: rgba(0, 255, 136, 0.15); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.3); }
+        .tag-beta { background: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid rgba(255, 170, 0, 0.3); }
+        .tag-new { background: rgba(0, 212, 255, 0.15); color: #00d4ff; border: 1px solid rgba(0, 212, 255, 0.3); }
+        .tag-web { background: rgba(255, 0, 136, 0.15); color: #ff0088; border: 1px solid rgba(255, 0, 136, 0.3); }
+
+        /* Barra de estado */
+        .status-bar {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .status-value {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo { font-size: 2rem; }
+            .exploits-grid { grid-template-columns: 1fr; }
+            .status-bar { flex-direction: column; text-align: center; }
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 26, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(0, 212, 255, 0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            color: #00d4ff;
+            text-align: center;
+        }
+
+        .loading-subtext {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Partículas de fondo -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Inyectando exploit...</div>
+        <div class="loading-subtext">No apagues la consola</div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1 class="logo">PS4 EXPLOIT HOST</h1>
+            <p class="subtitle">WebKit Exploits & Payloads</p>
+            <span class="firmware">Firmware 9.00 - 11.00</span>
+        </header>
+
+        <!-- Grid de Exploits -->
+        <div class="exploits-grid">
+            <!-- CVE-2026-43705 -->
+            <div class="exploit-card" onclick="loadExploit('cve-2026-43705.html')">
+                <div class="card-icon">⚡</div>
+                <h3 class="card-title">CVE-2026-43705</h3>
+                <p class="card-desc">TransformStream type confusion con memory spray. Unificado con variantes A y B para máxima compatibilidad.</p>
+                <div class="card-meta">
+                    <span class="tag tag-new">Nuevo</span>
+                    <span class="tag tag-stable">Estable</span>
+                    <span class="tag tag-web">WebKit</span>
+                </div>
+            </div>
+
+            <!-- GoldHEN -->
+            <div class="exploit-card" onclick="loadExploit('goldhen.html')">
+                <div class="card-icon">🚀</div>
+                <h3 class="card-title">GoldHEN v2.4</h3>
+                <p class="card-desc">Homebrew enabler completo con soporte para debug, cheats y cargar payloads.</p>
+                <div class="card-meta">
+                    <span class="tag tag-stable">Estable</span>
+                </div>
+            </div>
+
+            <!-- Web Activator -->
+            <div class="exploit-card" onclick="loadExploit('web-activator.html')">
+                <div class="card-icon">🌐</div>
+                <h3 class="card-title">Web Activator</h3>
+                <p class="card-desc">Herramienta de activación vía navegador para desbloquear funciones del sistema.</p>
+                <div class="card-meta">
+                    <span class="tag tag-beta">Beta</span>
+                    <span class="tag tag-web">WebKit</span>
+                </div>
+            </div>
+
+            <!-- Linux Loader -->
+            <div class="exploit-card" onclick="loadExploit('linux.html')">
+                <div class="card-icon">🐧</div>
+                <h3 class="card-title">Linux Loader</h3>
+                <p class="card-desc">Carga Linux en tu PS4. Soporte para discos externos y configuración persistente.</p>
+                <div class="card-meta">
+                    <span class="tag tag-stable">Estable</span>
+                </div>
+            </div>
+
+            <!-- FTP Server -->
+            <div class="exploit-card" onclick="loadExploit('ftp.html')">
+                <div class="card-icon">📁</div>
+                <h3 class="card-title">FTP Server</h3>
+                <p class="card-desc">Servidor FTP integrado para transferencia de archivos al disco de la consola.</p>
+                <div class="card-meta">
+                    <span class="tag tag-stable">Estable</span>
+                </div>
+            </div>
+
+            <!-- Bin Loader -->
+            <div class="exploit-card" onclick="loadExploit('binloader.html')">
+                <div class="card-icon">💾</div>
+                <h3 class="card-title">Bin Loader</h3>
+                <p class="card-desc">Cargador de payloads binarios vía socket. Puerto 9020 por defecto.</p>
+                <div class="card-meta">
+                    <span class="tag tag-stable">Estable</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de Estado -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span class="status-text">Estado: <span class="status-value">Listo</span></span>
+            </div>
+            <div class="status-item">
+                <span class="status-text">Conexión: <span class="status-value" id="connectionStatus">Local</span></span>
+            </div>
+            <div class="status-item">
+                <span class="status-text">Cache: <span class="status-value" id="cacheStatus">Activado</span></span>
+            </div>
+            <div class="status-item">
+                <span class="status-text">IP: <span class="status-value" id="ipAddress">-</span></span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>PS4 Exploit Host © 2025 | Usa bajo tu propia responsabilidad</p>
+            <p style="margin-top: 10px;">
+                <a href="#" onclick="clearCache(); return false;">Limpiar Cache</a> | 
+                <a href="#" onclick="showCredits(); return false;">Créditos</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Generar partículas
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // Cargar exploit
+        function loadExploit(url) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('active');
+            
+            // Simular carga o redirigir
+            setTimeout(() => {
+                window.location.href = url;
+            }, 1500);
+        }
+
+        // Obtener IP local
+        function getLocalIP() {
+            const rtc = new RTCPeerConnection({iceServers: []});
+            rtc.createDataChannel('');
+            rtc.onicecandidate = (e) => {
+                if (e.candidate) {
+                    const ip = /([0-9]{1,3}\.){3}[0-9]{1,3}/.exec(e.candidate.candidate);
+                    if (ip) {
+                        document.getElementById('ipAddress').textContent = ip[0];
+                    }
+                }
+            };
+            rtc.createOffer().then(o => rtc.setLocalDescription(o));
+        }
+
+        // Limpiar cache
+        function clearCache() {
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => caches.delete(name));
+                });
+                alert('Cache limpiado');
+                location.reload();
+            }
+        }
+
+        // Mostrar créditos
+        function showCredits() {
+            alert('CVE-2026-43705 Exploit\nUnificado y mejorado para PS4\n\nCréditos a la comunidad de desarrolladores');
+        }
+
+        // Inicializar
+        createParticles();
+        getLocalIP();
+
+        // Detectar si está cacheado
+        if (window.applicationCache) {
+            window.applicationCache.addEventListener('cached', () => {
+                document.getElementById('cacheStatus').textContent = 'Cacheado';
+            });
+        }
+    </script>
+</body>
+</html>
